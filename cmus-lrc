@@ -49,7 +49,7 @@ class Player:
         self.current = 0
         self.win = None
         self.notifyevent = Event()
-        curses.wrapper(self.show)
+        curses.wrapper(self.run)
 
 
     def query_lrc(self, song):
@@ -141,14 +141,14 @@ class Player:
         return position, title, artist, album
 
 
-    def show(self, screen):
+    def run(self, screen):
         curses.init_pair(6, curses.COLOR_CYAN, curses.COLOR_BLACK)
         h, w = screen.getmaxyx()
         win = curses.newwin(h, w, 0, 0)
         self.win = win
         textbox = Textbox(win)
-        # self.scroll(win, 0)
-        while not self.notifyevent.wait(0.5):
+        self.scroll(win, 0)
+        while not self.notifyevent.wait(0.2):
             cur = self.query_curline()
             self.scroll(win, cur)
 
