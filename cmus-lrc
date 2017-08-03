@@ -1,0 +1,198 @@
+#!/usr/bin/env python3
+# coding: utf-8
+# @File Name: lrcplayer.py
+# @Author: Joshua Liu
+# @Email: liuchaozhenyu@gmail.com
+# @Create Date: 2017-08-03 10:08:10
+# @Last Modified: 2017-08-03 20:08:05
+# @Description:
+import re
+import os
+import json
+import curses
+from urllib.request import urlopen
+from urllib.parse import quote
+from curses.textpad import Textbox
+from threading import Thread, Event
+
+def parse(path):
+    with open(path, 'r') as f:
+        lines = f.readlines()
+
+    lyrics = {}
+    re_lyric = re.compile(r'\[\d\d:\d\d.\d\d\]')
+    for line in lines:
+        line = line.strip()
+        matchs = re.findall(re_lyric, line)
+        value = re.sub(re_lyric, '', line)
+        for match in matchs:
+            lyrics[_get_time(match)] = value
+
+    return sorted(lyrics.items(), key=lambda i: i[0])
+
+
+def _get_time(match):
+    minutes = int(match[1:3])
+    seconds = int(match[4:6])
+    miliseconds = int(match[7:9])
+    return minutes * 60 + seconds + miliseconds / 100.0
+
+
+class Player:
+
+    def __init__(self, mode='default'):
+        self.lyrics = None
+        self.song = {}
+        self.mode = mode
+        self.current = 0
+        self.win = None
+        self.notifyevent = Event()
+        curses.wrapper(self.show)
+
+
+    def query_lrc(self, song):
+        base = './.cmus/lyrics/'
+        if not os.path.isdir(base):
+            os.makedirs(base)
+        lyric_name = song['title'] + '-' + song['artist'] + '.lrc'
+        if os.path.isfile(base + lyric_name):
+            return parse(base + lyric_name)
+        else:
+            if self._download_lrc(song):
+                return parse(base + lyric_name)
+            else:
+                return {}
+
+    def _download_lrc(self, song):
+        url = 'http://gecimi.com/api/lyric/'
+        url += quote(song['title']) + '/'
+        url += quote(song['artist'])
+        with urlopen(url) as f:
+            lyric_json = json.loads(f.read())
+        if not lyric_json:
+            return False
+        if 0 == lyric_json['code'] and lyric_json['count'] > 0:
+            surl = lyric_json['result'][0]['lrc']
+            with urlopen(surl) as f:
+                text = f.read()
+
+            base = './.cmus/lyrics/'
+            lyric_name = song['title'] + '-' + song['artist'] + '.lrc'
+
+            with open(base + lyric_name, 'w') as f:
+                f.write(text.decode('utf-8'))
+            return True
+        else:
+            return False
+
+
+    def query_curline(self):
+        data = self._get_cmus_info()
+        if not self._compare_song(data):
+            if data['title']:
+                self.song = {'title': data['title'], 'artist': data['artist']}
+                self.lyrics = self.query_lrc(self.song)
+
+        if not self.lyrics or len(self.lyrics) == 0:
+            return 0
+        for i, (k, _) in enumerate(self.lyrics):
+            if k >= data['position']:
+                return i - 1
+        return self.current + 1
+
+    def _compare_song(self, data):
+        if 'title' in data and 'title' in self.song and 'artist' in data and 'artist' in self.song:
+            if data['title'] == self.song['title'] and data['artist'] == self.song['artist']:
+                return True
+            else:
+                return False
+        return False
+
+    def _get_cmus_info(self):
+        text = os.popen('cmus-remote -Q').read()
+        position, title, artist, album = self._parse_cmus(text)
+        data = {'position': position, 'title': title, 'artist': artist, 'album': album}
+        return data
+
+
+    def _parse_cmus(self, text):
+        '''
+        status playing
+        '''
+        position = 0
+        album = ''
+        artist = ''
+        title = ''
+        lines = text.split('\n')
+        for line in lines:
+            if 'position' in line:
+                position = int(line.split(' ')[1])
+            elif 'tag artist' in line:
+                artist = line.split(' ')[2]
+            elif 'tag album' in line:
+                album = line.split(' ')[2]
+            elif 'tag title' in line:
+                title = line.split(' ')[2]
+
+        return position, title, artist, album
+
+
+    def show(self, screen):
+        curses.init_pair(6, curses.COLOR_CYAN, curses.COLOR_BLACK)
+        h, w = screen.getmaxyx()
+        win = curses.newwin(h, w, 0, 0)
+        self.win = win
+        textbox = Textbox(win)
+        # self.scroll(win, 0)
+        while not self.notifyevent.wait(0.5):
+            cur = self.query_curline()
+            self.scroll(win, cur)
+
+        # while True:
+        #     ch = win.getch()
+        #     if ord('q') == ch or ord('Q') == ch:
+        #         break
+        #     elif curses.KEY_UP == ch:
+        #         self.scroll(win, self.current - 1)
+        #     elif curses.KEY_DOWN == ch:
+        #         self.scroll(win, self.current + 1)
+        #     elif curses.KEY_RESIZE == ch:
+        #         self.scroll(win, self.current)
+
+
+    def scroll(self, win, cur):
+        '''
+        @param cur: 当前播放的行数，相对于 self.lyrics
+        '''
+        if cur == self.current and cur != 0:
+            return
+        if not self.lyrics:
+            return
+
+        if cur < len(self.lyrics) and cur >= 0:
+            self.current = cur
+        else:
+            return
+
+        win.clear()
+        h, w = win.getmaxyx()
+        begin = self.current - int(h * 0.4)
+
+        try:
+            for i in range(0, h):
+                if i + begin < 0 or i + begin > len(self.lyrics) - 1:
+                    win.addstr(i, 0, '')
+                else:
+                    k, v = self.lyrics[i + begin]
+                    if i + begin == self.current:
+                        win.addstr(i, (w-len(v))//2, v, curses.color_pair(6))
+                    else:
+                        win.addstr(i, (w-len(v))//2, v)
+            win.refresh()
+        except Exception as e:
+            pass
+
+
+if __name__ == '__main__':
+    player = Player()
+

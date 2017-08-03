@@ -1,3 +1,7 @@
 ## cmus-lrc
 
-动态展示歌词
+native python3 support
+python2 is not current support
+
+lyrics server provided by 歌词迷 api.geci.me
+
