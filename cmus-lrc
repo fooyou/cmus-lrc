@@ -126,7 +126,7 @@ class Player:
         for i, (k, _) in enumerate(self.lyrics):
             if k >= data['position']:
                 return i - 1
-        return self.current + 1
+        return len(self.lyrics) - 1
 
 
     def _compare_song(self, data):
