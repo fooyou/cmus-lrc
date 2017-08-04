@@ -168,13 +168,20 @@ class Player:
 
 
     def run(self, screen):
-        curses.init_pair(6, curses.COLOR_CYAN, curses.COLOR_BLACK)
+        # 使用系统默认的配色
+        curses.use_default_colors()
+        # 指定当前行的配色。-1: 代表无背景色
+        curses.init_pair(6, curses.COLOR_CYAN, -1) 
+        # 获取当前 window 的最大宽高（以显示字节为单位）
         h, w = screen.getmaxyx()
+        # 创建一个新窗口大小和 screen 一样（目前来看可以不用创建直接使用 screen）
         win = curses.newwin(h, w, 0, 0)
         self.win = win
-        textbox = Textbox(win)
-        self.scroll(win, 0)
-        while not self.notifyevent.wait(0.2):
+        textbox = Textbox(win) # textbox 目前看也可以不用，留着扩展吧
+        self.scroll(win, 0) # 从0行呈现
+
+        # 使用 event.wait() 来产生 time tick 任务，每 0.5s 循环一次
+        while not self.notifyevent.wait(0.5):
             cur = self.query_curline()
             self.scroll(win, cur)
 
@@ -218,15 +225,15 @@ class Player:
                     lw = (len(v) + len(v.encode()))//2
                     x = (w-lw)//2 if w-lw>=0 else 0
                     if i + begin == self.current:
-                        win.addstr(i, x, v, curses.color_pair(6))
+                        win.addstr(i, x, v, curses.color_pair(6) | curses.A_BOLD)
                     else:
                         win.addstr(i, x, v)
             win.refresh()
         except Exception as e:
             win.clear()
-            win.addstr(h//2, w//2, 'warning: enlarge window')
+            x = (w-len(str(e)))//2 if w-len(str(e)) >= 0 else 0
+            win.addstr(h//2, x, str(e))
             win.refresh()
-            pass
 
 
 if __name__ == '__main__':
