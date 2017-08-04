@@ -176,38 +176,24 @@ class Player:
         # 指定当前行的配色。-1: 代表无背景色
         curses.init_pair(6, curses.COLOR_CYAN, -1) 
         # 获取当前 window 的最大宽高（以显示字节为单位）
-        h, w = screen.getmaxyx()
-        # 创建一个新窗口大小和 screen 一样（目前来看可以不用创建直接使用 screen）
-        win = curses.newwin(h, w, 0, 0)
-        self.win = win
-        textbox = Textbox(win) # textbox 目前看也可以不用，留着扩展吧
-        self.scroll(win, 0) # 从0行呈现
+        self.win = screen
+        self.scroll(self.win, 0) # 从0行呈现
 
         # 使用 event.wait() 来产生 time tick 任务，每 0.5s 循环一次
         while not self.notifyevent.wait(0.5):
             cur = self.query_curline()
             if (-1 == cur):
-                self.showinfo(h, w)
+                self.showinfo()
             else:
-                self.scroll(win, cur)
-
-        # while True:
-        #     ch = win.getch()
-        #     if ord('q') == ch or ord('Q') == ch:
-        #         break
-        #     elif curses.KEY_UP == ch:
-        #         self.scroll(win, self.current - 1)
-        #     elif curses.KEY_DOWN == ch:
-        #         self.scroll(win, self.current + 1)
-        #     elif curses.KEY_RESIZE == ch:
-        #         self.scroll(win, self.current)
+                self.scroll(self.win, cur)
 
 
-    def showinfo(self, h, w):
+    def showinfo(self):
         title = self.song['title'].strip()
         artist = self.song['artist'].strip()
         wt = (len(title) + len(title.encode()))//2
         wa = (len(artist) + len(artist.encode()))//2
+        h, w = self.win.getmaxyx()
         xt = (w-wt)//2 if w-wt>=0 else 0
         xa = (w-wa)//2 if w-wa>=0 else 0
 
