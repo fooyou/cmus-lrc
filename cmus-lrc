@@ -89,14 +89,17 @@ class Player:
         return ok
 
     def _download_lrc_gecimi(self, song, url):
-        with urlopen(url) as f:
-            text = f.read()
-            if bytes == type(text):
-                lyric_json = json.loads(text.decode())
-            elif str == type(text):
-                lyric_json = json.loads(text)
+        try:
+            with urlopen(url) as f:
+                text = f.read()
+                if bytes == type(text):
+                    lyric_json = json.loads(text.decode())
+                elif str == type(text):
+                    lyric_json = json.loads(text)
 
-        if not lyric_json:
+            if not lyric_json:
+                return False
+        except Exception as e:
             return False
 
         if 0 == lyric_json['code'] and lyric_json['count'] > 0:
@@ -122,7 +125,7 @@ class Player:
                 self.lyrics = self.query_lrc(self.song)
 
         if not self.lyrics or len(self.lyrics) == 0:
-            return 0
+            return -1
         for i, (k, _) in enumerate(self.lyrics):
             if k >= data['position']:
                 return i - 1
@@ -183,7 +186,10 @@ class Player:
         # 使用 event.wait() 来产生 time tick 任务，每 0.5s 循环一次
         while not self.notifyevent.wait(0.5):
             cur = self.query_curline()
-            self.scroll(win, cur)
+            if (-1 == cur):
+                self.showinfo(h, w)
+            else:
+                self.scroll(win, cur)
 
         # while True:
         #     ch = win.getch()
@@ -195,6 +201,24 @@ class Player:
         #         self.scroll(win, self.current + 1)
         #     elif curses.KEY_RESIZE == ch:
         #         self.scroll(win, self.current)
+
+
+    def showinfo(self, h, w):
+        title = self.song['title'].strip()
+        artist = self.song['artist'].strip()
+        wt = (len(title) + len(title.encode()))//2
+        wa = (len(artist) + len(artist.encode()))//2
+        xt = (w-wt)//2 if w-wt>=0 else 0
+        xa = (w-wa)//2 if w-wa>=0 else 0
+
+        try:
+            self.win.clear()
+            self.win.addstr(h//2-1, xt, title)
+            self.win.addstr(h//2, xa, artist)
+            self.win.refresh()
+        except Exception as e:
+            pass
+
 
 
     def scroll(self, win, cur):
