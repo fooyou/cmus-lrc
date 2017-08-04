@@ -95,8 +95,10 @@ class Player:
                 lyric_json = json.loads(text.decode())
             elif str == type(text):
                 lyric_json = json.loads(text)
+
         if not lyric_json:
             return False
+
         if 0 == lyric_json['code'] and lyric_json['count'] > 0:
             surl = lyric_json['result'][0]['lrc']
             with urlopen(surl) as f:
@@ -126,6 +128,7 @@ class Player:
                 return i - 1
         return self.current + 1
 
+
     def _compare_song(self, data):
         if 'title' in data and 'title' in self.song and 'artist' in data and 'artist' in self.song:
             if data['title'] == self.song['title'] and data['artist'] == self.song['artist']:
@@ -133,6 +136,7 @@ class Player:
             else:
                 return False
         return False
+
 
     def _get_cmus_info(self):
         text = os.popen('cmus-remote -Q').read()
@@ -154,11 +158,11 @@ class Player:
             if 'position' in line:
                 position = int(line.split(' ')[1])
             elif 'tag artist' in line:
-                artist = ' '.join(line.split(' ')[2:])
+                artist = line.replace('tag artist ', '')
             elif 'tag album' in line:
-                album = ' '.join(line.split(' ')[2:])
+                album = line.replace('tag album ', '')
             elif 'tag title' in line:
-                title = ' '.join(line.split(' ')[2:])
+                title = line.replace('tag title ', '')
 
         return position, title, artist, album
 
@@ -210,10 +214,13 @@ class Player:
                     win.addstr(i, 0, '')
                 else:
                     k, v = self.lyrics[i + begin]
+                    v = v.strip()
+                    lw = (len(v) + len(v.encode()))//2
+                    x = (w-lw)//2 if w-lw>=0 else 0
                     if i + begin == self.current:
-                        win.addstr(i, (w-len(v))//2, v, curses.color_pair(6))
+                        win.addstr(i, x, v, curses.color_pair(6))
                     else:
-                        win.addstr(i, (w-len(v))//2, v)
+                        win.addstr(i, x, v)
             win.refresh()
         except Exception as e:
             win.clear()
