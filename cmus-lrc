@@ -189,8 +189,14 @@ class Player:
 
 
     def showinfo(self):
-        title = self.song['title'].strip()
-        artist = self.song['artist'].strip()
+        if 'title' in self.song:
+            title = self.song['title'].strip()
+        else:
+            title = 'Unknown song'
+        if 'artist' in self.song:
+            artist = self.song['artist'].strip()
+        else:
+            artist = 'Unknown artist'
         wt = (len(title) + len(title.encode()))//2
         wa = (len(artist) + len(artist.encode()))//2
         h, w = self.win.getmaxyx()
