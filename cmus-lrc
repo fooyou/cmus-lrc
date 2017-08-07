@@ -9,6 +9,7 @@
 import re
 import os
 import json
+import time
 import curses
 from urllib.request import urlopen
 from urllib.parse import quote
@@ -54,6 +55,38 @@ def _get_time(match):
     return minutes * 60 + seconds + miliseconds / 100.0
 
 
+def _kugo_get_songs(song):
+    callback = 'jQuery191009360820465904207_1502077916336'
+    api_pre = 'http://songsearch.kugou.com/song_search_v2?callback=' + callback + '&keyword='
+    api_pram = '&page=1&pagesize=30&userid=-1&clientver=&platform=WebFilter&tag=em&filter=2&iscorrection=1&privilege_filter=0&_='
+    timestamp = str(int(time.time() * 1000))
+    url = api_pre + quote(song) + api_pram + timestamp
+    jsn = []
+    with urlopen(url) as f:
+        text = f.read()
+        if bytes == type(text):
+            text = text.decode()
+        text = text[len(callback)+1 : len(text)-2]
+        jsn = json.loads(text)
+        jsn = jsn['data']['lists']
+    return jsn
+
+
+def _kugo_get_song_info(info):
+    api_pre = 'http://www.kugou.com/yy/index.php?r=play/getdata'
+    hashid = info['FileHash']
+    album_id = info['AlbumID']
+    timestamp = str(int(time.time() * 1000))
+    url = api_pre + '&hash=' + hashid + '&album_id=' + album_id + '&_=' + timestamp
+    jsn = {}
+    with urlopen(url) as f:
+        text = f.read()
+        if bytes == type(text):
+            text = text.decode()
+        jsn = json.loads(text)
+    return jsn
+
+
 class Player:
 
     def __init__(self, mode='default'):
@@ -79,16 +112,37 @@ class Player:
                 return {}
 
     def _download_lrc(self, song):
+        if False:
+            ok = self._download_lrc_gecimi(song, url)
+            if not ok:
+                url = base + quote(song['title'])
+                ok = self._download_lrc_gecimi(song, url)
+        else:
+            ok = self._download_lrc_kugo(song)
+        return ok
+
+
+    def _download_lrc_kugo(self, song):
+        songlist = _kugo_get_songs(song['title'])
+        lyrics = ''
+        for tune in songlist:
+            if tune['SingerName'] == song['artist']:
+                info = _kugo_get_song_info(tune)
+                if len(info) > 0:
+                    lyrics = info['data']['lyrics']
+                break
+        if len(lyrics) > 0:
+            lyric_name = song['artist'] + ' - ' + song['title'] + '.lrc'
+            with open(CMUS_LRC_HOME + lyric_name, 'w') as f:
+                f.write(lyrics)
+            return True
+        return False
+
+
+    def _download_lrc_gecimi(self, song):
         base = 'http://gecimi.com/api/lyric/'
         url = base + quote(song['title']) + '/'
         url += quote(song['artist'])
-        ok = self._download_lrc_gecimi(song, url)
-        if not ok:
-            url = base + quote(song['title'])
-            ok = self._download_lrc_gecimi(song, url)
-        return ok
-
-    def _download_lrc_gecimi(self, song, url):
         try:
             with urlopen(url) as f:
                 text = f.read()
@@ -128,7 +182,7 @@ class Player:
             return -1
         for i, (k, _) in enumerate(self.lyrics):
             if k >= data['position']:
-                return i - 1
+                return i - 1 if i - 1 >= 0 else 0
         return len(self.lyrics) - 1
 
 
