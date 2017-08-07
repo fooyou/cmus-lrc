@@ -69,7 +69,7 @@ class Player:
     def query_lrc(self, song):
         if not os.path.isdir(CMUS_LRC_HOME):
             os.makedirs(CMUS_LRC_HOME)
-        lyric_name = song['title'] + '-' + song['artist'] + '.lrc'
+        lyric_name = song['artist'] + ' - ' + song['title'] + '.lrc'
         if os.path.isfile(CMUS_LRC_HOME + lyric_name):
             return parse(CMUS_LRC_HOME + lyric_name)
         else:
@@ -107,7 +107,7 @@ class Player:
             with urlopen(surl) as f:
                 text = f.read()
 
-            lyric_name = song['title'] + '-' + song['artist'] + '.lrc'
+            lyric_name = song['artist'] + ' - ' + song['title'] + '.lrc'
 
             with open(CMUS_LRC_HOME + lyric_name, 'w') as f:
                 f.write(text.decode('utf-8'))
