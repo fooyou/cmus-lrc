@@ -11,12 +11,26 @@ import os
 import json
 import time
 import curses
+import logging
 from urllib.request import urlopen
 from urllib.parse import quote
 from curses.textpad import Textbox
 from threading import Thread, Event
+DEBUG = False
+if DEBUG:
+    from mem_top import mem_top
 
 CMUS_LRC_HOME = os.path.expanduser('~') + '/.cmus/lyrics/'
+LOGFILE = os.path.expanduser('~') + '/.cmus/cmus-lrc.log'
+
+def configure_logging():
+    f = logging.FileHandler(LOGFILE, 'w')
+    logger = logging.getLogger()
+    logger.setLevel(logging.DEBUG)
+    logger.addHandler(f)
+    if DEBUG:
+        logging.debug(mem_top())
+
 
 def parse(path):
     with open(path, 'r') as f:
@@ -80,15 +94,12 @@ def _kugo_get_song_info(info):
     url = api_pre + '&hash=' + hashid + '&album_id=' + album_id + '&_=' + timestamp
     jsn = {}
     with urlopen(url) as f:
-        text = f.read()
-        if bytes == type(text):
-            text = text.decode()
+        text = f.read().decode()
         jsn = json.loads(text)
     return jsn
 
 
 class Player:
-
     def __init__(self, mode='default'):
         self.lyrics = None
         self.song = {}
@@ -170,11 +181,13 @@ class Player:
             return False
 
 
-
     def query_curline(self):
         data = self._get_cmus_info()
         if not self._compare_song(data):
             if data['title']:
+                logging.info('playing %s' % data['title'])
+                if DEBUG:
+                    logging.debug(mem_top())
                 self.song = {'title': data['title'], 'artist': data['artist']}
                 self.lyrics = self.query_lrc(self.song)
 
@@ -294,18 +307,21 @@ class Player:
                     v = v.strip()
                     lw = (len(v) + len(v.encode()))//2
                     x = (w-lw)//2 if w-lw>=0 else 0
+                    ls = len(v) if len(v) <= w else w
                     if i + begin == self.current:
-                        win.addstr(i, x, v, curses.color_pair(6) | curses.A_BOLD)
+                        win.addstr(i, x, v[0:ls-1], curses.color_pair(6) | curses.A_BOLD)
                     else:
-                        win.addstr(i, x, v)
+                        win.addstr(i, x, v[0:ls-1])
             win.refresh()
         except Exception as e:
             win.clear()
             x = (w-len(str(e)))//2 if w-len(str(e)) >= 0 else 0
-            win.addstr(h//2, x, str(e))
+            l = len(str(e)) if len(str(e)) <= w else w
+            win.addstr(h//2, x, str(e)[0:l-1])
             win.refresh()
 
 
 if __name__ == '__main__':
+    configure_logging()
     player = Player()
 
