@@ -33,8 +33,11 @@ def configure_logging():
 
 
 def parse(path):
-    with open(path, 'r') as f:
-        lines = f.readlines()
+    try:
+        with open(path, 'r') as f:
+            lines = f.readlines()
+    except:
+        return {}
 
     re_lyric = re.compile(r'\[\d\d:\d\d.\d\d\]')
     lyrics = parse_lines(lines, re_lyric)
@@ -144,8 +147,11 @@ class Player:
                 break
         if len(lyrics) > 0:
             lyric_name = song['artist'] + ' - ' + song['title'] + '.lrc'
-            with open(CMUS_LRC_HOME + lyric_name, 'w') as f:
-                f.write(lyrics)
+            try:
+                with open(CMUS_LRC_HOME + lyric_name, 'w') as f:
+                    f.write(lyrics)
+            except:
+                pass
             return True
         return False
 
