@@ -234,11 +234,11 @@ class Player:
             if 'position' in line:
                 position = int(line.split(' ')[1])
             elif 'tag artist' in line:
-                artist = line.replace('tag artist ', '')
+                artist = line.replace('tag artist ', '').replace('/', '-')
             elif 'tag album' in line:
-                album = line.replace('tag album ', '')
+                album = line.replace('tag album ', '').replace('/', '-')
             elif 'tag title' in line:
-                title = line.replace('tag title ', '')
+                title = line.replace('tag title ', '').replace('/', '-')
 
         return position, title, artist, album
 
