@@ -315,9 +315,9 @@ class Player:
                     x = (w-lw)//2 if w-lw>=0 else 0
                     ls = len(v) if len(v) <= w else w
                     if i + begin == self.current:
-                        win.addstr(i, x, v[0:ls-1], curses.color_pair(6) | curses.A_BOLD)
+                        win.addstr(i, x, v[0:ls], curses.color_pair(6) | curses.A_BOLD)
                     else:
-                        win.addstr(i, x, v[0:ls-1])
+                        win.addstr(i, x, v[0:ls])
             win.refresh()
         except Exception as e:
             win.clear()
