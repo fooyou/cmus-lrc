@@ -20,8 +20,8 @@ DEBUG = False
 if DEBUG:
     from mem_top import mem_top
 
-CMUS_LRC_HOME = os.path.expanduser('~') + '/.cmus/lyrics/'
-LOGFILE = os.path.expanduser('~') + '/.cmus/cmus-lrc.log'
+CMUS_LRC_HOME = os.path.expanduser('~/.cmus/lyrics/')
+LOGFILE = os.path.expanduser('~/.cmus/cmus-lrc.log')
 
 def configure_logging():
     f = logging.FileHandler(LOGFILE, 'w')
